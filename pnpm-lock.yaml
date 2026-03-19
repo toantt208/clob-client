@@ -11,9 +11,6 @@ importers:
       '@polymarket/builder-signing-sdk':
         specifier: ^1.0.0
         version: 1.0.0
-      axios:
-        specifier: ^1.0.0
-        version: 1.13.2
       browser-or-node:
         specifier: ^2.1.1
         version: 2.1.1

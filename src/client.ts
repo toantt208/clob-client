@@ -1,5 +1,7 @@
 import type { BuilderConfig, BuilderHeaderPayload } from "@polymarket/builder-signing-sdk";
 import { END_CURSOR, INITIAL_CURSOR } from "./constants.ts";
+import { H2Pool } from "./h2pool.ts";
+import type { H2PoolOptions } from "./h2pool.ts";
 import {
     ARE_ORDERS_SCORING,
     CANCEL_ALL,
@@ -76,6 +78,7 @@ import {
     parseDropNotificationParams,
     post,
     put,
+    setH2Pool,
 } from "./http-helpers/index.ts";
 import { OrderBuilder } from "./order-builder/builder.ts";
 import { calculateBuyMarketPrice, calculateSellMarketPrice } from "./order-builder/helpers.ts";
@@ -136,7 +139,6 @@ import type {
 import { OrderType, Side } from "./types.ts";
 import {
     generateOrderBookSummaryHash,
-    isTickSizeSmaller,
     orderToJson,
     priceValid,
 } from "./utilities.ts";
@@ -176,6 +178,8 @@ export class ClobClient {
 
     private readonly tickSizeTtlMs: number;
 
+    readonly h2pool: H2Pool;
+
     // eslint-disable-next-line max-params
     constructor(
         host: string,
@@ -191,9 +195,14 @@ export class ClobClient {
         retryOnError?: boolean,
         tickSizeTtlMs?: number,
         throwOnError?: boolean,
+        h2PoolOptions?: H2PoolOptions,
     ) {
         this.host = host.endsWith("/") ? host.slice(0, -1) : host;
         this.chainId = chainId;
+
+        // Initialize HTTP/2 connection pool
+        this.h2pool = new H2Pool(this.host, h2PoolOptions);
+        setH2Pool(this.h2pool);
 
         if (signer !== undefined) {
             this.signer = signer;
@@ -1468,17 +1477,8 @@ export class ClobClient {
     }
 
     protected async _resolveTickSize(tokenID: string, tickSize?: TickSize): Promise<TickSize> {
-        const minTickSize = await this.getTickSize(tokenID);
-        if (tickSize) {
-            if (isTickSizeSmaller(tickSize, minTickSize)) {
-                throw new Error(
-                    `invalid tick size (${tickSize}), minimum for the market is ${minTickSize}`,
-                );
-            }
-        } else {
-            tickSize = minTickSize;
-        }
-        return tickSize;
+        if (tickSize) return tickSize;
+        return this.getTickSize(tokenID);
     }
 
     // http methods

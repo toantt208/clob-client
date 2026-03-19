@@ -1,5 +1,7 @@
 export * from "./client.ts";
 export * from "./config.ts";
+export { H2Pool } from "./h2pool.ts";
+export type { H2PoolOptions } from "./h2pool.ts";
 export * from "./errors.ts";
 export * from "./headers/index.ts";
 export * from "./order-builder/index.ts";
